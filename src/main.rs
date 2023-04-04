@@ -1,5 +1,5 @@
 use clap::Parser;
-use clap_derive::{Parser, ValueEnum};
+use clap_derive::{Parser, Subcommand};
 use midly::{self, MetaMessage};
 use rosc::{OscMessage, OscMidiMessage, OscPacket, OscType};
 use std::{net::SocketAddr, path::PathBuf, thread::sleep, time::Duration, vec};
@@ -11,21 +11,31 @@ use osc_udp_client::OscUdpClient;
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
-    #[arg(value_enum)]
+    #[command(subcommand)]
     command: Cmd,
-
-    #[arg(short, long, value_name = "MIDI FILE")]
-    file: PathBuf,
-
-    #[arg(short, long, value_name = "OSC PORT")]
-    port: Option<u16>,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Subcommand)]
+#[command(author, version, about, long_about = None)]
 enum Cmd {
     /// Play a MIDI file
-    Play,
+    #[command(author, version, about, long_about = None)]
+    Play {
+        /// Path to the MIDI file to play
+        #[arg(short, long, value_name = "MIDI FILE")]
+        file: PathBuf,
+
+        /// Set the socket addres that the sender binds to.
+        /// Use if the receiver filters to receive from a specific socket address.
+        #[arg(short, long, value_name = "OSC FROM PORT")]
+        sender: Option<u16>,
+
+        /// The destination port to play MIDI over osc.
+        #[arg(short, long, value_name = "OSC TO PORT")]
+        to: u16,
+    },
 }
+
 fn main() {
     let cli = Cli::parse();
 
@@ -40,15 +50,23 @@ fn main() {
 
     tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
-    let socket_addr: SocketAddr = match cli.port {
+    match cli.command {
+        Cmd::Play { file, to, sender } => play_osc(file, to, sender),
+    }
+}
+
+fn play_osc(file: PathBuf, to: u16, sender: Option<u16>) {
+    let sender: SocketAddr = match sender {
         Some(port) => format!("0.0.0.0:{}", port).parse().unwrap(),
         None => "0.0.0.0:0".parse().unwrap(),
     };
+    let to: SocketAddr = format!("0.0.0.0:{}", to).parse().unwrap();
+
     // create osc client
-    let osc_client = OscUdpClient::new(socket_addr).unwrap();
+    let osc_client = OscUdpClient::new(sender, to).unwrap();
 
     // Load bytes first
-    let data = std::fs::read(cli.file).unwrap();
+    let data = std::fs::read(file).unwrap();
 
     // Parse the raw bytes
     let smf = midly::SmfBytemap::parse(&data).unwrap();
@@ -120,7 +138,7 @@ fn main() {
                     let packet = &OscPacket::Message(OscMessage { addr, args });
                     match osc_client.send(&packet) {
                         Ok(_res) => {
-                            debug!("send: {:?}; port: {:?}", &msg_print, &osc_client.addr);
+                            debug!("send: {:?}; port: {:?}", &msg_print, &osc_client.to);
                         }
                         Err(err) => warn!("error: {}", err),
                     }

@@ -1,14 +1,20 @@
 # Setup
+
 [Install rust](https://www.rust-lang.org/tools/install)
+
+# Usage
+
+- `play`: The only subcommand, playback a MIDI file over OSC
+- `-f`: Filepath to the MIDI to play
+- `-t`: Target port to broadcast OSC MIDI
+- `-s`: Sender port to bind the UDP socket to
 
 # Examples
 
-Basic
-```
-cargo run -- play -f midi_files/Video_Game_Themes_-_Zelda__Ocarina_Of_Time.mid
-```
+- Basic usage
 
-Play osc on specific port
-```
-cargo run -- play -p 57120 -f midi_files/Video_Game_Themes_-_Zelda__Ocarina_Of_Time.mid
-```
+        cargo run -- play -f midi_files/Nola__Arndt__Arndt_1915_DA.mid  -t 57101
+
+- Play osc from specific sender port
+
+        cargo run -- play -f midi_files/Nola__Arndt__Arndt_1915_DA.mid -s 57120 -t 57101
