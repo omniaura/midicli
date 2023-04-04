@@ -13,6 +13,9 @@ use osc_udp_client::OscUdpClient;
 struct Cli {
     #[command(subcommand)]
     command: Cmd,
+
+    #[arg(short, long)]
+    log_level: Option<Level>
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Subcommand)]
@@ -43,7 +46,7 @@ fn main() {
     let subscriber = FmtSubscriber::builder()
         // all spans/events with a level higher than TRACE (e.g, debug, info, warn, etc.)
         // will be written to stdout.
-        .with_max_level(Level::TRACE)
+        .with_max_level(cli.log_level.unwrap_or(Level::WARN))
         .with_timer(time::uptime())
         // completes the builder.
         .finish();
