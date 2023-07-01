@@ -11,12 +11,12 @@ use osc_udp_client::OscUdpClient;
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
-    #[command(subcommand)]
-    command: Cmd,
-
     /// Set the log level for the CLI. Defaults to WARN
     #[arg(short, long)]
-    log_level: Option<Level>
+    log_level: Option<Level>,
+
+    #[command(subcommand)]
+    command: Cmd,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Subcommand)]
